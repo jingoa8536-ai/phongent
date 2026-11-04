@@ -265,3 +265,16 @@ private struct ChatPhotoPreview:View {
         .task(id:item){preview=nil;if let data=try? await item.loadTransferable(type:Data.self){preview=UIImage(data:data)}}
     }
 }
+private struct noticeView: View {
+let detail: String
+let phase: String
+var onAnswer: () -> Void
+var body: some View {
+VStack(alignment:.leading,spacing:10) {
+Label("需要处理",systemImage:"exclamationmark.circle").font(.headline).foregroundStyle(.orange)
+Text(detail).textSelection(.enabled)
+if phase=="waiting" {Button("回答 agent") {onAnswer()}}
+else {Text("请在安卓端处理，状态会自动同步").font(.caption).foregroundStyle(.secondary)}
+}.padding(16).frame(maxWidth:.infinity,alignment:.leading).background(.orange.opacity(0.1),in:RoundedRectangle(cornerRadius:18))
+}
+}
