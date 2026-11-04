@@ -26,129 +26,92 @@ struct NearbyRadar:View {
     private func connectAll(){
         batchBusy=true
         let targets=devices.filter{!$0.client.connected && ($0.approved || $0.available) && !hub.connecting.contains($0.id)}
-        Task{@MainActor in defer{batchBusy=false};let failed=await hub.connectAll(targets);if !failed.isEmpty{error="连接失败："+failed.joined(separator:"、")+"。可点击上方设备重试。"}}
+        Task{@MainActor in defer{batchBusy=false};let failed=await hub.connectAll(targets);if !failed.isEmpty{error="连接失败："+failed.joined(separator:"、")+"。点击上方设备重试。"}}
     }
-    @ViewBuilder private func deviceMenu(_ agent:NearbyAgent)->some View {
+    @ViewBuilder private func deviceMenu(_ agent:NearbyAgent) -> some View {
         Button("重命名设备",systemImage:"pencil"){renameDevice=agent;deviceName=agent.name;showRename=true}
         Button("移动到分组",systemImage:"folder"){checked=[agent.id];groupName="";targetGroup=hub.group(of:agent.id);editingGroups=true}.disabled(!agent.client.connected)
     }
     var body:some View {
         NavigationStack{
             ScrollView{
-                VStack(spacing:16){
-                    HStack{Button(batchBusy ? "连接中…":"一键连接",systemImage:"link",action:connectAll).disabled(batchBusy || devices.isEmpty);Spacer();Button("分组",systemImage:"folder"){checked=[];groupName="";targetGroup="默认组";editingGroups=true}}
+                VStack(spacing:18){
+                    HStack{
+                        Button("连接全部",systemImage:"link"){connectAll()}.disabled(batchBusy || devices.filter{!$0.client.connected && ($0.approved || $0.available)}.isEmpty)
+                        Spacer()
+                        Button("设备与分组",systemImage:"folder.badge.plus"){checked=[];groupName="";targetGroup="默认组";editingGroups=true}.disabled(devices.isEmpty)
+                        Button("管理分组",systemImage:"folder"){groupName="";targetGroup="默认组";editingGroups=true}.disabled(hub.deviceGroups.isEmpty)
+                    }.buttonStyle(.bordered).controlSize(.small).disabled(batchBusy)
                     GeometryReader{geo in
-                        let center=CGPoint(x:geo.size.width/2,y:170)
+                        let center=CGPoint(x:geo.size.width/2,y:150)
                         ZStack{
-                            ForEach([100.0,200.0,300.0],id:\.self){size in Circle().stroke(Color.primary.opacity(0.06)).frame(width:size,height:size).position(center)}
-                            VStack{AoraAnimatedAvatar(phase:"idle",active:scenePhase == .active).frame(width:76,height:76);Text("本机").font(.caption)}.position(center)
+                            ForEach([50,100,150],id:\.self){radius in RadarRing(radius:CGFloat(radius),width:geo.size.width)}
+                            VStack(spacing:4){AoraAnimatedAvatar(phase:hub.phase,active:true,shape:hub.avatarShape,hue:hub.avatarHue).frame(width:64,height:64);Text("Aora").font(.caption2)}.position(center)
                             ForEach(Array(visible.enumerated()),id:\.element.id){index,agent in
-                                let angle = -Double.pi/2+Double(index)*2*Double.pi/Double(max(visible.count,3))
-                                Button{open(agent)}label:{DeviceOrb(agent:agent,active:scenePhase == .active,size:devices.count>6 ? 42:62)}.buttonStyle(.plain)
+                                let angle:Double=Double(index) * (2 * .pi / Double(max(visible.count,1))) - .pi/2
+                                let orbSize:CGFloat=devices.count>6 ? 42:62
+                                let orbX:CGFloat=center.x + cos(angle) * min(geo.size.width*0.39,148)
+                                let orbY:CGFloat=center.y + sin(angle) * 140
+                                Button{open(agent)}label:{DeviceOrb(agent:agent,size:orbSize)}
+                                    .buttonStyle(.plain)
                                     .contextMenu{deviceMenu(agent)}
-                                    .position(x:center.x+cos(angle)*min(geo.size.width*0.39,148),y:center.y+sin(angle)*140)
+                                    .position(x:orbX,y:orbY)
                             }
                         }
-                    }.frame(height:345)
-                    if pages>1{HStack{Button("上一页"){page=max(0,page-1)}.disabled(page==0);Spacer();Text("\(min(page,pages-1)+1) / \(pages)");Spacer();Button("下一页"){page+=1}.disabled(page>=pages-1)}}
-                    HStack{Text("\(devices.filter{$0.client.connected}.count) 已连接 · \(hub.connecting.count) 连接中");Spacer();Text("\(devices.filter{!$0.client.connected}.count) 未连接")}.font(.caption).foregroundStyle(.secondary)
-                    HStack{Text("已连接设备").font(.headline);Spacer()}
-                    if devices.filter({$0.client.connected}).isEmpty{Text("暂无已连接设备").foregroundStyle(.secondary)}
-                    LazyVGrid(columns:[GridItem(.adaptive(minimum:90),spacing:8)],spacing:8){
+                    }.frame(height:300)
+                    HStack{Button{page=max(0,page-1)}label:{Label("上一页",systemImage:"chevron.left")}.disabled(page==0);Spacer();Text("第 \(page+1) / \(pages) 页").font(.caption).foregroundStyle(.secondary);Spacer();Button{page=min(pages-1,page+1)}label:{Label("下一页",systemImage:"chevron.right")}.disabled(page>=pages-1)}
+                    if let error{Text(error).font(.caption).foregroundStyle(.orange)}
+                    if devices.filter({$0.client.connected}).isEmpty && devices.isEmpty {Text("暂无设备").font(.caption).foregroundStyle(.secondary)}
+                    LazyVGrid(columns:[GridItem(.adaptive(minimum:160))],spacing:14){
                         ForEach(devices.filter{$0.client.connected}){agent in
-                            Button{open(agent)}label:{
-                                VStack(spacing:6){
-                                    AoraAnimatedAvatar(phase:agent.phase,active:scenePhase == .active,shape:agent.avatarShape,hue:agent.avatarHue).frame(width:38,height:38)
-                                    Text(agent.name).font(.caption.weight(.medium)).lineLimit(1)
-                                    Text(hub.group(of:agent.id)).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
-                                }.frame(maxWidth:.infinity).padding(.vertical,10).background(Color(uiColor:.secondarySystemGroupedBackground),in:RoundedRectangle(cornerRadius:12))
+                            Button{selected=agent}label:{
+                                VStack(alignment:.leading,spacing:10){
+                                    HStack{Text(agent.name).lineLimit(1);Spacer();Image(systemName:"checkmark.circle.fill").foregroundStyle(.green)}
+                                    Text(hub.group(of:agent.id)).font(.caption).foregroundStyle(.secondary)
+                                    HStack(spacing:5){ForEach(agent.client.snapshot.tasks.prefix(3)){task in Text(task).font(.caption).lineLimit(1).padding(.horizontal,6).padding(.vertical,3).background(Color(uiColor:.secondarySystemBackground),in:Capsule())};if agent.client.snapshot.tasks.count>3{Text("+\(agent.client.snapshot.tasks.count-3)").font(.caption).foregroundStyle(.secondary)}}
+                                }.padding(14).frame(maxWidth:.infinity,alignment:.leading).background(Color(uiColor:.secondarySystemGroupedBackground),in:RoundedRectangle(cornerRadius:18))
                             }.buttonStyle(.plain).contextMenu{deviceMenu(agent)}
                         }
                     }
+                    VStack(alignment:.leading,spacing:12){
+                        Text("未连接的设备").font(.headline)
+                        if devices.filter({!$0.client.connected}).isEmpty {Text("没有未连接的设备").font(.caption).foregroundStyle(.secondary)}
+                        ForEach(devices.filter{!$0.client.connected}){agent in
+                            HStack(spacing:12){
+                                DeviceOrb(agent:agent,size:52)
+                                VStack(alignment:.leading,spacing:4){Text(agent.name).font(.headline).lineLimit(1);Text(hub.group(of:agent.id)).font(.caption).foregroundStyle(.secondary)}
+                                Spacer()
+                                if agent.available && !hub.connecting.contains(agent.id){Button("连接",systemImage:"link"){open(agent)}.buttonStyle(.borderedProminent)}
+                                if hub.connecting.contains(agent.id){ProgressView().controlSize(.small)}
+                            }.padding(.vertical,6).contextMenu{deviceMenu(agent)}
+                        }
+                    }
                 }.padding(18)
-            }.background(Color(uiColor:.systemGroupedBackground)).navigationTitle("设备").navigationBarTitleDisplayMode(.inline)
-            .onChange(of:hub.renameError){_,value in if let value{error=value;hub.renameError=nil}}
-            .onChange(of:pages){_,value in page=min(page,value-1)}
-            .sheet(item:$selected){agent in AgentPanel(agent:agent,hub:hub)}
-            .sheet(isPresented:$editingGroups){NavigationStack{Form{
-                Section("1 · 勾选要移动的设备"){
-                    Button(checked.count == devices.filter{$0.client.connected}.count ? "取消全选":"全选"){
-                        let ids=Set(devices.filter{$0.client.connected}.map(\.id));checked=checked == ids ? []:ids
-                    }
-                    ForEach(devices.filter{$0.client.connected}){agent in
-                        Button{if checked.contains(agent.id){checked.remove(agent.id)}else{checked.insert(agent.id)}}label:{
-                            HStack{Image(systemName:checked.contains(agent.id) ? "checkmark.circle.fill":"circle");VStack(alignment:.leading){Text(agent.name);Text(hub.group(of:agent.id)).font(.caption).foregroundStyle(.secondary)}}
-                        }.foregroundStyle(.primary)
-                    }
-                }
-                Section("2 · 选择目标组"){
-                    Picker("移动到",selection:$targetGroup){
-                        Text("默认组").tag("默认组")
-                        ForEach(hub.groupNames.filter{$0 != "默认组"},id:\.self){Text($0).tag($0)}
-                        Text("新建分组…").tag("__new__")
-                    }
-                    if targetGroup == "__new__"{TextField("输入新组名",text:$groupName)}
-                    Text("每台设备属于一个组。移动后，原组不再包含该设备。").font(.caption).foregroundStyle(.secondary)
-                }
-            }.navigationTitle("设备分组").toolbar{
-                ToolbarItem(placement:.cancellationAction){Button("取消"){editingGroups=false}}
-                ToolbarItem(placement:.confirmationAction){Button("移动 \(checked.count) 台"){
-                    let name=targetGroup == "__new__" ? groupName.trimmingCharacters(in:.whitespacesAndNewlines):targetGroup
-                    for id in checked where devices.contains(where:{$0.id==id && $0.client.connected}){hub.setGroup(id,name:name)}
-                    editingGroups=false
-                }.disabled(checked.isEmpty || (targetGroup == "__new__" && groupName.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty))}
-            }}}
-
-            .alert("连接提醒",isPresented:Binding(get:{error != nil},set:{if !$0{error=nil}})){Button("好",role:.cancel){error=nil}}message:{Text(error ?? "")}
-            .alert("修改设备名称",isPresented:$showRename){TextField("名称",text:$deviceName);Button("取消",role:.cancel){};Button("保存"){if let agent=renameDevice{hub.rename(agent,to:deviceName)}}}
-            .onChange(of:hub.requestedDevice){_,id in if let id,let agent=devices.first(where:{$0.id==id}){open(agent);hub.requestedDevice=nil}}
+            }
+            .navigationTitle("附近").toolbar{ToolbarItem(placement:.primaryAction){Button("刷新",systemImage:"arrow.clockwise"){hub.refresh(force:true)}}}
+            .sheet(item:$selected){agent in DeviceWorkspace(hub:hub,initialDevice:agent.id,singleDevice:false,onLeave:{selected=nil})}
+            .sheet(isPresented:$editingGroups){NavigationStack{GroupEditor(hub:hub,checked:$checked,groupName:$groupName,targetGroup:$targetGroup)}}
+            .alert("设备名称",isPresented:$showRename){TextField("名称",text:$deviceName);Button("取消",role:.cancel){renameDevice=nil};Button("保存"){if let agent=renameDevice{hub.rename(agent,to:deviceName)};renameDevice=nil}}
+            .onChange(of:scenePhase){_,phase in if phase == .active{hub.refresh(force:false)}}
         }
+    }
+}
+struct RadarRing:View {
+    var radius:CGFloat
+    var width:CGFloat
+    var body:some View {
+        Circle().stroke(Color.mint.opacity(0.16),lineWidth:1.2).frame(width:radius*2,height:radius*2).position(x:width/2,y:150)
     }
 }
 struct DeviceOrb:View {
     @ObservedObject var agent:NearbyAgent
-    var active:Bool
-    var size:CGFloat=67
+    var size:CGFloat=64
     var body:some View {
-        VStack(spacing:4){
-            ZStack(alignment:.bottomTrailing){
-                Circle().stroke(agent.approved ? Color.mint.opacity(0.6):Color.primary.opacity(0.12),lineWidth:1).frame(width:size,height:size)
-                AoraAnimatedAvatar(phase:agent.phase,active:active && agent.available,shape:agent.avatarShape,hue:agent.avatarHue).frame(width:size,height:size)
-                Circle().fill(agent.demo ? Color.purple:agent.available && agent.client.connected ? Color.mint:agent.available ? Color.orange:Color.gray).frame(width:9,height:9).overlay(Circle().stroke(Color.black,lineWidth:2)).offset(x:-5,y:-4)
-            }
-            Text(agent.name).font(.caption.weight(.medium)).lineLimit(1).frame(width:size+24)
-            Text(agent.demo ? "演示 · "+agent.client.snapshot.title:agent.connection).font(.system(size:10)).foregroundStyle(.secondary).lineLimit(1).frame(width:size+24)
-        }.accessibilityElement(children:.combine)
-    }
-}
-struct AgentPanel:View {
-    @ObservedObject var agent:NearbyAgent
-    @ObservedObject var hub:NearbyHub
-    @Environment(\.scenePhase) private var scenePhase
-    var body:some View {
-        if agent.approved || agent.demo {
-            DeviceWorkspace(hub:hub,initialDevice:agent.id,singleDevice:true)
-                .onAppear{hub.select(agent)}
-        } else {
-            NavigationStack {
-                VStack(spacing:22){
-                    Spacer()
-                    AoraAnimatedAvatar(phase:agent.phase,active:scenePhase == .active,shape:agent.avatarShape,hue:agent.avatarHue).frame(width:190,height:190)
-                    Text(agent.name).font(.title.bold())
-                    Text(agent.connection).foregroundStyle(.secondary)
-                    Text("请在安卓端允许连接").multilineTextAlignment(.center).foregroundStyle(.secondary)
-                    Button(agent.connection == "等待安卓允许" ? "等待安卓允许…":"申请连接",systemImage:"link") {Task{await hub.invite(agent)}}.buttonStyle(.borderedProminent).tint(.mint).disabled(agent.connection == "等待安卓允许" || !agent.available)
-                    Spacer()
-                }.padding(30).navigationTitle("连接 agent").navigationBarTitleDisplayMode(.inline)
-            }
-        }
-    }
-}
-struct RippleShape:Shape {
-    var progress:Double
-    func path(in rect:CGRect)->Path {
-        var p=Path();let radius=rect.width*0.68*progress
-        for i in 0...180{let angle=Double(i)/180*2*Double.pi;let r=radius+(sin(angle*5+progress*9)+sin(angle*3-progress*7))*4*progress;let pt=CGPoint(x:rect.midX+cos(angle)*r,y:rect.midY+sin(angle)*r);if i==0{p.move(to:pt)}else{p.addLine(to:pt)}}
-        p.closeSubpath();return p
+        ZStack {
+            if agent.client.connected {Circle().fill(Color.mint.opacity(0.12)).frame(width:size+14,height:size+14)}
+            AoraAnimatedAvatar(phase:agent.phase,active:agent.client.connected,shape:agent.avatarShape,hue:agent.avatarHue).frame(width:size,height:size)
+            if agent.client.connected {Circle().fill(.green).frame(width:10,height:10).offset(x:size/2-4,y:-size/2+4)}
+            if agent.client.snapshot.busy {Text("处理中").font(.system(size:9,weight:.bold)).padding(.horizontal,6).padding(.vertical,2).background(.orange,in:Capsule()).offset(y:size/2+12)}
+        }.frame(width:size+14,height:size+14).contentShape(Circle())
     }
 }
