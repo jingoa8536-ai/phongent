@@ -86,7 +86,7 @@ struct Dashboard:View {
                         }
                         if let status=bridge.commandStatus,status.contains("不确定") || status.contains("请先") {Text(status).font(.caption).foregroundStyle(.orange)}
                         if !bridge.connected {Text(bridge.status).font(.caption).foregroundStyle(.orange)}
-                        if ["waiting","takeover","confirmation"].contains(bridge.snapshot.phase),bridge.snapshot.currentConversationId == bridge.snapshot.conversationId {
+                        if ["waiting","takeover","confirmation"].contains(bridge.snapshot.phase) && bridge.snapshot.currentConversationId == bridge.snapshot.conversationId {
                             noticeView(detail:bridge.snapshot.detail,phase:bridge.snapshot.phase,onAnswer:{inputFocused=true})
                                 //
                                 //
@@ -100,9 +100,9 @@ struct Dashboard:View {
                 }.scrollDismissesKeyboard(.interactively)
                     .onAppear {bridge.loadChat();proxy.scrollTo("bottom",anchor:.bottom)}
                     .task {if notificationReply == nil,let id=bridge.snapshot.currentConversationId {await bridge.loadRemoteHistory(id);bridge.markChatRead(id)}}
-                    .onChange(of:bridge.snapshot.exchanges?.count){_ in proxy.scrollTo("bottom",anchor:.bottom)}
-                    .onChange(of:bridge.chatMessages.count) { _ in withAnimation {proxy.scrollTo("bottom",anchor:.bottom)} }
-                    .onChange(of:inputFocused) { focused in if focused {withAnimation {proxy.scrollTo("bottom",anchor:.bottom)}} }
+                    .onChange(of:bridge.snapshot.exchanges?.count, perform:{_ in proxy.scrollTo("bottom",anchor:.bottom)})
+                    .onChange(of:bridge.chatMessages.count, perform: { _ in withAnimation {proxy.scrollTo("bottom",anchor:.bottom)} })
+                    .onChange(of:inputFocused, perform: { focused in if focused {withAnimation {proxy.scrollTo("bottom",anchor:.bottom)}} })
             }
             .background(Color(uiColor:.systemGroupedBackground))
             .safeAreaInset(edge:.bottom,spacing:0) {composer}
@@ -110,12 +110,12 @@ struct Dashboard:View {
             .overlay {if showWindows && notificationReply == nil{NativeVirtualPip(bridge:bridge)}}
             .navigationTitle(notificationReply == nil ? "" : "通过 agent 回复").navigationBarTitleDisplayMode(.inline)
             .toolbar(notificationReply == nil ? .hidden:.visible,for:.navigationBar)
-            .onChange(of:bridge.snapshot.commandId){id in
-                if let id,replyCommandIDs.contains(id),!bridge.snapshot.runId.isEmpty{replyRunIDs.insert(bridge.snapshot.runId)}
-            }
-            .onChange(of:bridge.snapshot.runId){run in
-                if let id=bridge.snapshot.commandId,replyCommandIDs.contains(id),!run.isEmpty{replyRunIDs.insert(run)}
-            }
+            .onChange(of:bridge.snapshot.commandId, perform:{id in
+                if let id,replyCommandIDs.contains(id),!bridge.snapshot.runId.isEmpty{replyRunIDs.insert(bridge.snapshot.runId)}))
+            })
+            .onChange(of:bridge.snapshot.runId, perform:{run in
+                if let id=bridge.snapshot.commandId,replyCommandIDs.contains(id),!run.isEmpty{replyRunIDs.insert(run)}))
+            })
             .toolbar {
                 if notificationReply != nil {ToolbarItem(placement:.cancellationAction){Button("关闭"){dismiss()}}}
                 ToolbarItemGroup(placement:.keyboard) {Spacer();Button("收起键盘",systemImage:"keyboard.chevron.compact.down") {inputFocused=false;replyFocused=false}}
