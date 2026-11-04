@@ -41,8 +41,8 @@ struct ModelSettingsView:View {
             .toolbar{Button("完成"){dismiss()}}
             .sheet(item:$adding){preset in AddModelProviderView(initialPreset:preset)}
             .onAppear{catalog.syncChatGPT()}
-            .onChange(of:account.models){_,_ in catalog.syncChatGPT()}
-            .onChange(of:account.credentials.clientId){_,_ in catalog.syncChatGPT()}
+            .onChange(of:account.models){_ in catalog.syncChatGPT()}
+            .onChange(of:account.credentials.clientId){_ in catalog.syncChatGPT()}
         }
     }
 }
@@ -62,7 +62,7 @@ struct ModelRolePicker:View {
             if role == .dispatch {Section{Text("仅当前主控端调用，用于拆分和分配任务；不下发到设备执行模型。").font(.footnote)}}
             ForEach(catalog.saved.providers){provider in
                 Section(provider.name) {
-                    ForEach(provider.models.filter{search.isEmpty || $0.id.localizedCaseInsensitiveContains(search) || $0.name.localizedCaseInsensitiveContains(search)}){model in
+                    ForEach(provider.models.filter{search.isEmpty || ($0.id + " " + $0.name).localizedCaseInsensitiveContains(search)}){model in
                         Button {catalog.choose(role,provider:provider,model:model.id);dismiss()} label:{
                             HStack {VStack(alignment:.leading){Text(model.name);if model.name != model.id{Text(model.id).font(.caption).foregroundStyle(.secondary)}}}
                         }
@@ -102,7 +102,7 @@ struct AddModelProviderView:View {
                 } else {Button("使用已登录的 ChatGPT"){catalog.syncChatGPT();dismiss()}}
                 Section("添加服务商") {
                     ScrollView(.horizontal,showsIndicators:false){HStack {ForEach(ProviderPreset.all){item in
-                        Button(item.name){selectPreset(item)}
+                        Button(action:{selectPreset(item)}) { Text(item.name) }
                         .buttonStyle(.bordered).tint(preset==item.name ? .mint:.gray)
                     }}}.listRowInsets(EdgeInsets(top:12,leading:0,bottom:12,trailing:0))
                     if preset=="自定义" {
@@ -124,7 +124,7 @@ struct AddModelProviderView:View {
                 }.disabled(testing)
             }.navigationTitle("添加服务商").navigationBarTitleDisplayMode(.inline)
             .toolbar{Button("取消"){dismiss()}.disabled(testing)}
-            .onChange(of:account.credentials.accessToken){_,token in if !token.isEmpty{catalog.syncChatGPT()}}
+            .onChange(of:account.credentials.accessToken){token in if !token.isEmpty{catalog.syncChatGPT()}}
         }.interactiveDismissDisabled(testing)
     }
 }
@@ -164,7 +164,7 @@ struct ModelProviderDetail:View {
                         if let message=catalog.errors[id]{Text(message).font(.caption).foregroundStyle(message.hasPrefix("调用成功") ? .green:.orange)}
                     }
                     Section("模型（\(provider.models.count)）") {
-                        ForEach(provider.models.filter{search.isEmpty || $0.id.localizedCaseInsensitiveContains(search) || $0.name.localizedCaseInsensitiveContains(search)}){model in
+                        ForEach(provider.models.filter{search.isEmpty || ($0.id + " " + $0.name).localizedCaseInsensitiveContains(search)}){model in
                             VStack(alignment:.leading,spacing:8){
                                 Text(model.name).font(.headline)
                                 if model.name != model.id{Text(model.id).font(.caption).foregroundStyle(.secondary)}
