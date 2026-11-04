@@ -127,7 +127,7 @@ private struct DeviceConversationGroup:View {
             }
             .onChange(of:bridge.snapshot.chatRevision, perform: { _ in Task{await bridge.refreshConversations()} })
             .onChange(of:bridge.snapshot.currentConversationId, perform: { _ in Task{await bridge.refreshConversations()} })
-            .onChange(of:bridge.snapshot.phase) { _ in Task{await bridge.refreshConversations()} })
+            .onChange(of:bridge.snapshot.phase, perform: { _ in Task{await bridge.refreshConversations()} })
         }
     }
 }
