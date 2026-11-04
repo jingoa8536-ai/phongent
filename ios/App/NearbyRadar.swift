@@ -46,7 +46,7 @@ struct NearbyRadar:View {
                         let center=CGPoint(x:geo.size.width/2,y:150)
                         ZStack{
                             ForEach([50,100,150],id:\.self){radius in RadarRing(radius:CGFloat(radius),width:geo.size.width)}
-                            VStack(spacing:4){AoraAnimatedAvatar(phase:hub.phase,active:true,shape:hub.avatarShape,hue:hub.avatarHue).frame(width:64,height:64);Text("Aora").font(.caption2)}.position(center)
+                            VStack(spacing:4){AoraAnimatedAvatar(phase:"idle",active:true,shape:"blob").frame(width:64,height:64);Text("Aora").font(.caption2)}.position(center)
                             ForEach(Array(visible.enumerated()),id:\.element.id){index,agent in
                                 let angle:Double=Double(index) * (2 * .pi / Double(max(visible.count,1))) - .pi/2
                                 let orbSize:CGFloat=devices.count>6 ? 42:62
@@ -88,11 +88,11 @@ struct NearbyRadar:View {
                     }
                 }.padding(18)
             }
-            .navigationTitle("附近").toolbar{ToolbarItem(placement:.primaryAction){Button("刷新",systemImage:"arrow.clockwise"){hub.refresh(force:true)}}}
+            .navigationTitle("附近").toolbar{ToolbarItem(placement:.primaryAction){Button("刷新",systemImage:"arrow.clockwise"){Task{await hub.refresh()}}}}
             .sheet(item:$selected){agent in DeviceWorkspace(hub:hub,initialDevice:agent.id,singleDevice:false,onLeave:{selected=nil})}
             .sheet(isPresented:$editingGroups){NavigationStack{GroupEditor(hub:hub,checked:$checked,groupName:$groupName,targetGroup:$targetGroup)}}
             .alert("设备名称",isPresented:$showRename){TextField("名称",text:$deviceName);Button("取消",role:.cancel){renameDevice=nil};Button("保存"){if let agent=renameDevice{hub.rename(agent,to:deviceName)};renameDevice=nil}}
-            .onChange(of:scenePhase){phase in if phase == .active{hub.refresh(force:false)}}
+            .onChange(of:scenePhase){phase in if phase == .active{Task{await hub.refresh()}}}
         }
     }
 }
