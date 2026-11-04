@@ -36,18 +36,12 @@ struct FleetWorkspace:View {
                 ForEach(hub.groupNames,id:\.self){group in
                     HStack(spacing:0){Button{selection=nil;selectedGroup=group}label:{Text(group).font(.caption2).lineLimit(2)};Button{if !collapsedGroups.insert(group).inserted{collapsedGroups.remove(group)}}label:{Image(systemName:collapsedGroups.contains(group) ? "chevron.right":"chevron.down").font(.caption2).frame(width:22,height:32)}}
                     if !collapsedGroups.contains(group){ForEach(allAgents.filter{hub.group(of:$0.id)==group}){agent in
-                    VStack(spacing:1){AoraAnimatedAvatar(phase:agent.phase,active:agent.client.connected,shape:agent.avatarShape,hue:agent.avatarHue).frame(width:58,height:58);Text(agent.name).font(.caption2).lineLimit(2).frame(width:60);Circle().fill(agent.client.connected ? .green:.gray).frame(width:5,height:5)}.padding(.vertical,5).background(selection==agent.id ? Color.mint.opacity(0.14):.clear,in:RoundedRectangle(cornerRadius:16))
-                    .frame(width:68,height:92)
-                    .background(Color.mint.opacity(pressingDevice==agent.id || mentionedDevice==agent.id ? 0.18:0),in:RoundedRectangle(cornerRadius:16))
-                    .animation(.spring(response:0.28,dampingFraction:0.65),value:pressingDevice)
-                    .animation(.spring(response:0.28,dampingFraction:0.65),value:mentionedDevice)
-                    .overlay{AvatarTouchSurface(label:agent.name,onTap:{focused=false;selectedGroup=nil;selection=agent.id;hub.select(agent)},onPress:{down in pressingDevice=down ? agent.id:nil},onLongPress:{
+                    FleetAgentTile(agent:agent,pressingDevice:pressingDevice,mentionedDevice:mentionedDevice,isSelected:selection==agent.id,onTap:{focused=false;selectedGroup=nil;selection=agent.id;hub.select(agent)},onPress:{down in pressingDevice=down ? agent.id:nil},onLongPress:{
                         guard !planning else{return}
                         selection=nil;selectedGroup=nil;input += (input.isEmpty ? "":" ")+"@"+agent.name+" ";focused=true
                         mentionedDevice=agent.id
                         Task{@MainActor in try? await Task.sleep(for:.milliseconds(450));if mentionedDevice==agent.id{mentionedDevice=nil}}
-                    })}
-
+                    })
                 }
                 }}
             }.padding(.vertical,10)}.frame(width:74)
@@ -74,10 +68,9 @@ struct FleetWorkspace:View {
                 }.padding(.horizontal,14)
                 allChat
             }
-
         }.background(Color(uiColor:.systemGroupedBackground))
         .safeAreaInset(edge:.bottom,spacing:0){composer}
-        .onChange(of:photoItems){_tems in
+        .onChange(of:photoItems){items in
             loadingPhotos=true
             Task{@MainActor in
                 defer{loadingPhotos=false}
@@ -126,9 +119,7 @@ struct FleetWorkspace:View {
             }catch{routingError=error.localizedDescription}
         }
     }
-
     private var composer:some View {
-
                 VStack(alignment:.leading,spacing:8){
                     if !photos.isEmpty {
                         ScrollView(.horizontal){
@@ -166,9 +157,7 @@ struct FleetWorkspace:View {
                     if !input.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty{Button{sendTasks()}label:{Image(systemName:"arrow.up.circle.fill").font(.system(size:32)).frame(width:40,height:46)}.disabled(loadingPhotos || planning || store.sending || !agents.contains{$0.client.connected})}
                     if focused{Button{focused=false}label:{Image(systemName:"keyboard.chevron.compact.down").frame(width:28,height:46)}.accessibilityLabel("收起键盘")}
                 }
-
                 }.padding(.horizontal,14).padding(.vertical,10).background(.ultraThinMaterial)
-
     }
     private var allChat:some View {
         ScrollViewReader{proxy in
@@ -183,7 +172,6 @@ struct FleetWorkspace:View {
                                 if delivery.needsRetry==true,let agent=agents.first(where:{$0.id==delivery.deviceID}),agent.client.snapshot.taskQueueVersion==1{
                                     Button("重试此设备"){Task{await store.retry(delivery,agent:agent)}}.disabled(store.sending || !agent.client.connected)
                                 }
-
                                 if let ex=delivery.exchange {NativeExchangeView(exchange:ex,client:agents.first{$0.id==delivery.deviceID}?.client)}else if !delivery.reply.isEmpty{AndroidMarkdown(text:delivery.reply)}
                             }.padding(12).frame(maxWidth:.infinity,alignment:.leading).background(Color(uiColor:.secondarySystemGroupedBackground),in:RoundedRectangle(cornerRadius:16))
                         }
@@ -193,8 +181,33 @@ struct FleetWorkspace:View {
             }.scrollDismissesKeyboard(.interactively).onTapGesture{focused=false}
             .onChange(of:store.batches.count){_ in proxy.scrollTo("fleet-bottom",anchor:.bottom)}
             .overlay(alignment:.bottomTrailing){FleetPipStack(agents:agents).padding(8)}
-
         }
+    }
+}
+private struct FleetAgentTile:View {
+    @ObservedObject var agent:NearbyAgent
+    var pressingDevice:String?
+    var mentionedDevice:String?
+    var isSelected:Bool
+    var onTap:()->Void
+    var onPress:(Bool)->Void
+    var onLongPress:()->Void
+    private var isHighlighted:Bool {pressingDevice==agent.id || mentionedDevice==agent.id}
+    private var tileContent:some View {
+        VStack(spacing:1){
+            AoraAnimatedAvatar(phase:agent.phase,active:agent.client.connected,shape:agent.avatarShape,hue:agent.avatarHue).frame(width:58,height:58)
+            Text(agent.name).font(.caption2).lineLimit(2).frame(width:60)
+            Circle().fill(agent.client.connected ? .green:.gray).frame(width:5,height:5)
+        }
+    }
+    private var tileBase:some View {
+        tileContent.padding(.vertical,5).background(isSelected ? Color.mint.opacity(0.14):.clear,in:RoundedRectangle(cornerRadius:16)).frame(width:68,height:92)
+    }
+    var body:some View {
+        tileBase.background(Color.mint.opacity(isHighlighted ? 0.18:0),in:RoundedRectangle(cornerRadius:16))
+            .animation(.spring(response:0.28,dampingFraction:0.65),value:pressingDevice)
+            .animation(.spring(response:0.28,dampingFraction:0.65),value:mentionedDevice)
+            .overlay{AvatarTouchSurface(label:agent.name,onTap:onTap,onPress:onPress,onLongPress:onLongPress)}
     }
 }
 struct FleetPipStack:View {
@@ -216,7 +229,6 @@ struct FleetPip:View {
         .onChange(of:phase){value in if value == .active{video.start(agent.client,virtual:true)}else{video.stop()}}
     }
 }
-
 /// Fixed hit region; animation never changes the touch geometry.
 private struct AvatarTouchSurface:UIViewRepresentable {
     var label:String
