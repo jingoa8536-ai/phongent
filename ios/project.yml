@@ -2,7 +2,7 @@ name: MikaRemote
 options:
   bundleIdPrefix: com.kassen.mikaremote
   deploymentTarget:
-    iOS: '16.2'
+    iOS: '17.0'
 settings:
   base:
     SWIFT_VERSION: '5.0'
