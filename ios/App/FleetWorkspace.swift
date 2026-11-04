@@ -77,7 +77,7 @@ struct FleetWorkspace:View {
 
         }.background(Color(uiColor:.systemGroupedBackground))
         .safeAreaInset(edge:.bottom,spacing:0){composer}
-        .onChange(of:photoItems){_,items in
+        .onChange(of:photoItems){_tems in
             loadingPhotos=true
             Task{@MainActor in
                 defer{loadingPhotos=false}
