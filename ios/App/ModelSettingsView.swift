@@ -141,6 +141,23 @@ struct ModelProviderDetail:View {
     @State private var confirmRemove=false
     @State private var search=""
     var provider:ModelProvider?{catalog.saved.providers.first{$0.id==id}}
+    private func keyAlertActions(provider: ModelProvider) -> some View {
+            Group {
+                        SecureField("API Key",text:$key)
+                        Button("测试并保存") {
+                                        var draft: ModelProvider = provider
+                                        draft.apiKey = key
+                                        key = ""
+                                        Task {
+                                                            do {
+                                                                                    try await catalog.testAndSave(draft,manualModel:"")
+                                                                                    dismiss()
+                                                            } catch {
+                                                            }
+                                        }
+                        }
+            }
+    }
     private func roleButtons(provider:ModelProvider, modelId:String) -> some View {
         HStack {
             ForEach(ModelRole.allCases,id:\.self){role in
@@ -187,7 +204,7 @@ struct ModelProviderDetail:View {
                     Section{Button("移除服务商",role:.destructive){confirmRemove=true}}
                 }.navigationTitle(provider.name).searchable(text:$search,prompt:"搜索模型")
                 .confirmationDialog("移除服务商及其模型用途？",isPresented:$confirmRemove,titleVisibility:.visible){Button("移除",role:.destructive){catalog.remove(id);dismiss()}}
-                .alert("修改 API Key",isPresented:$changingKey){SecureField("API Key",text:$key);Button("测试并保存"){var draft=provider;draft.apiKey=key;key="";Task{do{try await catalog.testAndSave(draft);dismiss()}catch{}}}} 
+                .alert("修改 API Key",isPresented:$changingKey){keyAlertActions(provider:provider)} 
             } else {ContentUnavailableView("服务商已移除",systemImage:"network")}
         }
     }
