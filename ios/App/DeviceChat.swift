@@ -36,6 +36,16 @@ struct Dashboard:View {
     private var canSend:Bool {
         !uploading && bridge.connected && !bridge.demoMode && !bridge.sending && (!bridge.snapshot.busy || waitingForAnswer || bridge.snapshot.taskQueueVersion==1) && (!input.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty || !photoItems.isEmpty)
     }
+    private func replyTaskRow(_ id:String) -> some View {
+        VStack(alignment:.leading,spacing:8){
+            Text(replyDrafts[id] ?? "").frame(maxWidth:.infinity,alignment:.trailing)
+            if let task=bridge.snapshot.queuedTasks?.first(where:{$0.id==id}){
+                Text(["queued":"已排队","dispatching":"正在启动","running":"执行中","completed":"已完成","failed":"执行失败","cancelled":"已取消","uncertain":"待核实"][task.state] ?? task.state).font(.caption).foregroundStyle(.secondary)
+                if !task.error.isEmpty{Text(task.error).foregroundStyle(.orange)}
+                if let result=task.result,!result.isEmpty{Text(result).textSelection(.enabled)}
+            }else if let pending=bridge.chatMessages.first(where:{$0.id==id+"-user"}){Text(pending.status).font(.caption).foregroundStyle(.secondary)}
+        }.padding(12).background(.thinMaterial,in:RoundedRectangle(cornerRadius:16))
+    }
     var body:some View {
         NavigationStack {
             ScrollViewReader { proxy in
@@ -52,14 +62,7 @@ struct Dashboard:View {
                         }
                         if notificationReply != nil {
                             ForEach(replyCommandIDs,id:\.self){id in
-                                VStack(alignment:.leading,spacing:8){
-                                    Text(replyDrafts[id] ?? "").frame(maxWidth:.infinity,alignment:.trailing)
-                                    if let task=bridge.snapshot.queuedTasks?.first(where:{$0.id==id}){
-                                        Text(["queued":"已排队","dispatching":"正在启动","running":"执行中","completed":"已完成","failed":"执行失败","cancelled":"已取消","uncertain":"待核实"][task.state] ?? task.state).font(.caption).foregroundStyle(.secondary)
-                                        if !task.error.isEmpty{Text(task.error).foregroundStyle(.orange)}
-                                        if let result=task.result,!result.isEmpty{Text(result).textSelection(.enabled)}
-                                    }else if let pending=bridge.chatMessages.first(where:{$0.id==id+"-user"}){Text(pending.status).font(.caption).foregroundStyle(.secondary)}
-                                }.padding(12).background(.thinMaterial,in:RoundedRectangle(cornerRadius:16))
+                                replyTaskRow(id)
                             }
                             ForEach((bridge.snapshot.exchanges ?? []).filter{replyRunIDs.contains($0.id) || replyPayloads.values.contains($0.goal)}){exchange in
                                 NativeExchangeView(exchange:replyExchange(exchange),client:bridge,answer:bridge.snapshot.phase=="waiting" ? {text in Task{await bridge.command("answer",text:text)}}:nil)
