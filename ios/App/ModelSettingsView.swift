@@ -205,7 +205,7 @@ struct ModelProviderDetail:View {
                 }.navigationTitle(provider.name).searchable(text:$search,prompt:"搜索模型")
                 .confirmationDialog("移除服务商及其模型用途？",isPresented:$confirmRemove,titleVisibility:.visible){Button("移除",role:.destructive){catalog.remove(id);dismiss()}}
                 .alert("修改 API Key",isPresented:$changingKey){keyAlertActions(provider:provider)} 
-            } else {ContentUnavailableView("服务商已移除",systemImage:"network")}
+            } else {VStack(spacing:8){Image(systemName:"network");Text("服务商已移除")}.foregroundStyle(.secondary)}
         }
     }
 }
