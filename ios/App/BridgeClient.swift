@@ -299,7 +299,7 @@ enum PairingStore {
             chatMessages=messages;DeviceChatHistory.save(messages,device:chatDevice)
         } catch {conversationError="历史消息读取失败，保留本机记录"}
     }
-    func deleteChat(_ id:String) async {
+    func renameChat(id:String,title:String) async throws { if let i = conversations.firstIndex(where: { $0.id == id }) { conversations[i].title = title } } func deleteChat(_ id:String) async {
         guard connected,!sending,!switchingChat else {notice=AgentNotice(text:"请连接设备后重试");return}
         sending=true;defer{sending=false}
         do {
