@@ -199,7 +199,7 @@ struct FleetWorkspace:View {
 }
 struct FleetPipStack:View {
     var agents:[NearbyAgent]
-    @AppStorage("sho}wAgentWindows") private var showWindows=true
+    @AppStorage("showAgentWindows") private var showWindows=true
     var body:some View {if showWindows{ScrollView(.horizontal){HStack(alignment:.bottom,spacing:8){ForEach(agents){agent in FleetPip(agent:agent)}}).fixedSize(horizontal:false,vertical:true)}}
 }
 struct FleetPip:View {
@@ -213,7 +213,7 @@ struct FleetPip:View {
         ZStack{if video.live {VStack(spacing:3){Text(agent.name).font(.caption2).lineLimit(1);VirtualControlSurface(video:video,bridge:agent.client,width:expanded ? 150:82,height:(expanded ? 150:82)/video.aspect,expanded:$expanded)}.frame(width:expanded ? 150:82).offset(x:offset.width+drag.width,y:offset.height+drag.height).gesture(DragGesture(minimumDistance:12).updating($drag){v,s,_ in if !video.virtualControlled{s=v.translation}}.onEnded{v in guard !video.virtualControlled else{return};offset=CGSize(width:max(-40,min(40,offset.width+v.translation.width)),height:max(-220,min(0,offset.height+v.translation.height)))},including:video.virtualControlled ? .subviews:.all)}}
         .frame(width:video.live ? (expanded ? 150:82):0,height:video.live ? (expanded ? 150:82)/video.aspect+(expanded && video.canControlVirtual ? 65:20):0)
         .task{video.start(agent.client,virtual:true)}.onDisappear{video.stop()}
-        .onChange(of:phase){_alue in if value == .active{video.start(agent.client,virtual:true)}else{video.stop()}}
+        .onChange(of:phase){value in if value == .active{video.start(agent.client,virtual:true)}else{video.stop()}}
     }
 }
 
