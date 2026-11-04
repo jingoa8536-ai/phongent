@@ -157,7 +157,10 @@ struct ModelProviderDetail:View {
         }.padding(.vertical, 5)
     }
     
-                                                                                       var body:some View {
+                                                                                       private func filteredModels(provider:ModelProvider) -> [ProviderModel] {
+                                                                                                                                                               provider.models.filter { search.isEmpty || ($0.id + " " + $0.name).localizedCaseInsensitiveContains(search) }
+                                                                                       }
+    var body:some View {
         Group {
             if let provider {
                 List {
@@ -175,7 +178,7 @@ struct ModelProviderDetail:View {
                         if let message=catalog.errors[id]{Text(message).font(.caption).foregroundStyle(message.hasPrefix("调用成功") ? .green:.orange)}
                     }
                     Section {
-                        ForEach(provider.models.filter{search.isEmpty || ($0.id+" "+$0.name).localizedCaseInsensitiveContains(search)}){model in
+                        ForEach(filteredModels(provider:provider)){model in
                                                                                                                                         modelRow(provider:provider, model:model)
                                                                                                                                         
                         }
