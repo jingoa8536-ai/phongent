@@ -49,7 +49,8 @@ struct Dashboard:View {
     private var pendingUserMessages:[DeviceChatMessage] {
                                      bridge.chatMessages.filter { $0.role == "user" && ["提交中", "提交结果不确定", "已排队"].contains($0.status) }
     }
-    var body:some View {
+    private func chatMessageRow(_ message: DeviceChatMessage) -> some View { HStack(alignment:.bottom) { if message.role=="user" {Spacer(minLength:36)} VStack(alignment:.leading,spacing:8) { Text(message.text).textSelection(.enabled) Text(message.status).font(.caption2).foregroundStyle(.secondary) }.padding(14).background(message.role=="user" ? Color.mint.opacity(0.16) : Color(uiColor:.secondarySystemGroupedBackground),in:RoundedRectangle(cornerRadius:20)) if message.role != "user" {Spacer(minLength:36)} } }.id(message.id) }
+var body:some View {
         NavigationStack {
             ScrollViewReader { proxy in
                 ScrollView {
@@ -76,18 +77,8 @@ struct Dashboard:View {
                             }
        ForEach(pendingUserMessages){pending in Text(pending.text).padding(14).frame(maxWidth:.infinity,alignment:.trailing)}
                         } else {
-                        ForEach(bridge.chatMessages) { message in
-                            HStack(alignment:.bottom) {
-                                if message.role=="user" {Spacer(minLength:36)}
-                                VStack(alignment:.leading,spacing:8) {
-                                    Text(message.text).textSelection(.enabled)
-                                    Text(message.status).font(.caption2).foregroundStyle(.secondary)
-                                }.padding(14)
-                                    .background(message.role=="user" ? Color.mint.opacity(0.16) : Color(uiColor:.secondarySystemGroupedBackground),in:RoundedRectangle(cornerRadius:20))
-                                if message.role != "user" {Spacer(minLength:36)}
-                            }.id(message.id)
-                        }
-                        if let status=bridge.commandStatus,status.contains("不确定") || status.contains("请先") {Text(status).font(.caption).foregroundStyle(.orange)}
+                    ForEach(bridge.chatMessages) { message in chatMessageRow(message) }
+                            if let status=bridge.commandStatus,status.contains("不确定") || status.contains("请先") {Text(status).font(.caption).foregroundStyle(.orange)}
                         if !bridge.connected {Text(bridge.status).font(.caption).foregroundStyle(.orange)}
                         if ["waiting","takeover","confirmation"].contains(bridge.snapshot.phase) && bridge.snapshot.currentConversationId == bridge.snapshot.conversationId {
                             noticeView(detail:bridge.snapshot.detail,phase:bridge.snapshot.phase,onAnswer:{inputFocused=true})
