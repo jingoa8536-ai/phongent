@@ -33,6 +33,9 @@ struct NearbyRadar:View {
         Button("移动到分组",systemImage:"folder"){checked=[agent.id];groupName="";targetGroup=hub.group(of:agent.id);editingGroups=true}.disabled(!agent.client.connected)
     }
 private func applyrename(){if let agent=renameDevice{hub.rename(agent,to:deviceName)};renameDevice=nil}
+    @ViewBuilder private func taskTags(_ agent:NearbyAgent) -> some View {
+                                                                          HStack(spacing:5){ForEach(agent.client.snapshot.tasks.prefix(3)){task in Text(task).font(.caption).lineLimit(1).padding(.horizontal,6).padding(.vertical,3).background(Color(uiColor:.secondarySystemBackground),in:Capsule())};if agent.client.snapshot.tasks.count>3{Text("+" + String(agent.client.snapshot.tasks.count - 3)).font(.caption).foregroundStyle(.secondary)}}
+    }
     var body:some View {
         NavigationStack{
             ScrollView{
@@ -69,7 +72,7 @@ private func applyrename(){if let agent=renameDevice{hub.rename(agent,to:deviceN
                                 VStack(alignment:.leading,spacing:10){
                                     HStack{Text(agent.name).lineLimit(1);Spacer();Image(systemName:"checkmark.circle.fill").foregroundStyle(.green)}
                                     Text(hub.group(of:agent.id)).font(.caption).foregroundStyle(.secondary)
-                                    HStack(spacing:5){ForEach(agent.client.snapshot.tasks.prefix(3)){task in Text(task).font(.caption).lineLimit(1).padding(.horizontal,6).padding(.vertical,3).background(Color(uiColor:.secondarySystemBackground),in:Capsule())};if agent.client.snapshot.tasks.count>3{Text("+\(agent.client.snapshot.tasks.count-3)").font(.caption).foregroundStyle(.secondary)}}
+                                    taskTags(agent)
                                 }.padding(14).frame(maxWidth:.infinity,alignment:.leading).background(Color(uiColor:.secondarySystemGroupedBackground),in:RoundedRectangle(cornerRadius:18))
                             }.buttonStyle(.plain).contextMenu{deviceMenu(agent)}
                         }
