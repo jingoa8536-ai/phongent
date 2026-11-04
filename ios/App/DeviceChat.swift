@@ -242,7 +242,7 @@ struct Dashboard:View {
         replyFocused=false;replyTarget=nil
         Task {await bridge.command("task",text:task)}
     }
-}
+
 
 private struct AgentComposerGlass:ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
