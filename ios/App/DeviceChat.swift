@@ -87,12 +87,12 @@ struct Dashboard:View {
                         if let status=bridge.commandStatus,status.contains("不确定") || status.contains("请先") {Text(status).font(.caption).foregroundStyle(.orange)}
                         if !bridge.connected {Text(bridge.status).font(.caption).foregroundStyle(.orange)}
                         if ["waiting","takeover","confirmation"].contains(bridge.snapshot.phase),bridge.snapshot.currentConversationId == bridge.snapshot.conversationId {
-                            VStack(alignment:.leading,spacing:10) {
-                                Label("需要处理",systemImage:"exclamationmark.circle").font(.headline).foregroundStyle(.orange)
-                                Text(bridge.snapshot.detail).textSelection(.enabled)
-                                if bridge.snapshot.phase=="waiting" {Button("回答 agent") {inputFocused=true}}
-                                else {Text("请在安卓端处理，状态会自动同步").font(.caption).foregroundStyle(.secondary)}
-                            }.padding(16).frame(maxWidth:.infinity,alignment:.leading).background(.orange.opacity(0.1),in:RoundedRectangle(cornerRadius:18))
+                            noticeView(detail:bridge.snapshot.detail,phase:bridge.snapshot.phase,onAnswer:{inputFocused=true})
+                                //
+                                //
+                                //
+                                //
+                            }
                         }
                         }
                         Color.clear.frame(height:1).id("bottom")
