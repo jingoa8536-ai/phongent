@@ -100,9 +100,9 @@ struct Dashboard:View {
                 }.scrollDismissesKeyboard(.interactively)
                     .onAppear {bridge.loadChat();proxy.scrollTo("bottom",anchor:.bottom)}
                     .task {if notificationReply == nil,let id=bridge.snapshot.currentConversationId {await bridge.loadRemoteHistory(id);bridge.markChatRead(id)}}
-                    .onChange(of:bridge.snapshot.exchanges?.count){_,_ in proxy.scrollTo("bottom",anchor:.bottom)}
-                    .onChange(of:bridge.chatMessages.count) { _,_ in withAnimation {proxy.scrollTo("bottom",anchor:.bottom)} }
-                    .onChange(of:inputFocused) { _,focused in if focused {withAnimation {proxy.scrollTo("bottom",anchor:.bottom)}} }
+                    .onChange(of:bridge.snapshot.exchanges?.count){_ in proxy.scrollTo("bottom",anchor:.bottom)}
+                    .onChange(of:bridge.chatMessages.count) { _ in withAnimation {proxy.scrollTo("bottom",anchor:.bottom)} }
+                    .onChange(of:inputFocused) { focused in if focused {withAnimation {proxy.scrollTo("bottom",anchor:.bottom)}} }
             }
             .background(Color(uiColor:.systemGroupedBackground))
             .safeAreaInset(edge:.bottom,spacing:0) {composer}
@@ -110,10 +110,10 @@ struct Dashboard:View {
             .overlay {if showWindows && notificationReply == nil{NativeVirtualPip(bridge:bridge)}}
             .navigationTitle(notificationReply == nil ? "" : "通过 agent 回复").navigationBarTitleDisplayMode(.inline)
             .toolbar(notificationReply == nil ? .hidden:.visible,for:.navigationBar)
-            .onChange(of:bridge.snapshot.commandId){_,id in
+            .onChange(of:bridge.snapshot.commandId){id in
                 if let id,replyCommandIDs.contains(id),!bridge.snapshot.runId.isEmpty{replyRunIDs.insert(bridge.snapshot.runId)}
             }
-            .onChange(of:bridge.snapshot.runId){_,run in
+            .onChange(of:bridge.snapshot.runId){run in
                 if let id=bridge.snapshot.commandId,replyCommandIDs.contains(id),!run.isEmpty{replyRunIDs.insert(run)}
             }
             .toolbar {
