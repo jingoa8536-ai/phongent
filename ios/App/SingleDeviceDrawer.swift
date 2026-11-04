@@ -56,8 +56,8 @@ struct SingleDeviceDrawer:View {
                 }.padding(20)
             }.background(Color(uiColor:.systemBackground)).toolbar(.hidden,for:.navigationBar)
             .task {await bridge.refreshConversations()}
-            .onChange(of:bridge.snapshot.chatRevision){_,_ in Task{await bridge.refreshConversations()}}
-            .onChange(of:bridge.snapshot.currentConversationId){_,_ in Task{await bridge.refreshConversations()}}
+            .onChange(of:bridge.snapshot.chatRevision){_ in Task{await bridge.refreshConversations()}}
+            .onChange(of:bridge.snapshot.currentConversationId){_ in Task{await bridge.refreshConversations()}}
         }
     }
 }
