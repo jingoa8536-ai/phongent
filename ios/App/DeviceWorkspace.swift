@@ -25,7 +25,7 @@ struct DeviceWorkspace:View {
                     if let agent=selected {
                         Dashboard(onShowSidebar:{withAnimation(.easeOut(duration:0.2)){drawer.toggle()}},agentName:agent.name,avatarShape:agent.avatarShape,avatarHue:agent.avatarHue,onRename:{renameText=agent.name;renameTarget=agent})
                             .environmentObject(agent.client).id(agent.id)
-                    } else {ContentUnavailableView("选择设备",systemImage:"iphone.gen3")}
+                    } else {VStack { Image(systemName: "iphone.gen3").font(.largeTitle).foregroundStyle(.secondary); Text("选择设备").font(.headline) }}
                 }
                 if drawer && !wide {
                     Color.black.opacity(0.45).ignoresSafeArea().onTapGesture{withAnimation{drawer=false}}
