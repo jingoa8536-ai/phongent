@@ -46,7 +46,7 @@ struct ModelChatView:View {
                             }
                             if let error=chat.error {Text(error).font(.caption).foregroundStyle(.orange)}
                         }.padding()
-                    }.onChange(of:chat.messages.last?.text){_,_ in if let id=chat.messages.last?.id{proxy.scrollTo(id,anchor:.bottom)}}
+                    }.onChange(of:chat.messages.last?.text){_ in if let id=chat.messages.last?.id{proxy.scrollTo(id,anchor:.bottom)}}
                 }
                 HStack(alignment:.botto {
                     TextField("与 agent 对话",text:$text,axis:.vertical).lineLimit(1...6).padding(12).background(.quaternary,in:RoundedRectangle(cornerRadius:14))
