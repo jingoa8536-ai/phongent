@@ -192,7 +192,7 @@ struct RemoteVideoPanel:View {
                 .offset(x:expanded ? 12:max(0,min(geometry.size.width-width-12,position.width+drag.width)),y:expanded ? 10:max(0,min(geometry.size.height-height-135,position.height+drag.height)))
         }.padding(.top,expanded ? 0:125).padding(.bottom,expanded ? 0:85)
         .task{video.start(bridge)}.onDisappear{video.stop()}
-        .onChange(of:scenePhase){_,phase in if phase == .active{video.start(bridge)}else{video.stop()}}
+        .onChange(of:scenease){_,pse in if phase == .active{video.start(bridge)}else{video.stop()}}
         .alert("输入到安卓当前输入框",isPresented:$showText){TextField("文本",text:$text);Button("取消",role:.cancel){};Button("填入"){let value=text;Task{await video.input(bridge,["action":"text","text":value])}}}message:{Text("先点击安卓输入框。填入会替换该输入框内容，不会自动发送。")}
     }
 }
@@ -222,7 +222,7 @@ struct NativeVirtualPip:View {
             }
         }.padding(.top,125).padding(.bottom,85)
         .task {video.start(bridge,virtual:true)}.onDisappear{video.stop()}
-        .onChange(of:scenePhase){_,phase in if phase == .active{video.start(bridge,virtual:true)}else{video.stop()}}
+        .onChange(of:scenePhase){_hase in if phase == .active{video.start(bridge,virtual:true)}else{video.stop()}}
     }
 }
 
