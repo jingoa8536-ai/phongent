@@ -287,3 +287,5 @@ else {Text("请在安卓端处理，状态会自动同步").font(.caption).foreg
 }.padding(16).frame(maxWidth:.infinity,alignment:.leading).background(.orange.opacity(0.1),in:RoundedRectangle(cornerRadius:18))
 }
 }
+
+}
