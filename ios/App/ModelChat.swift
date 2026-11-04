@@ -48,7 +48,7 @@ struct ModelChatView:View {
                         }.padding()
                     }.onChange(of:chat.messages.last?.text){_ in if let id=chat.messages.last?.id{proxy.scrollTo(id,anchor:.bottom)}}
                 }
-                HStack(alignment:.botto {
+                HStack(alignment:.bottom) {
                     TextField("与 agent 对话",text:$text,axis:.vertical).lineLimit(1...6).padding(12).background(.quaternary,in:RoundedRectangle(cornerRadius:14))
                     if chat.busy {Button("停止"){chat.stop()}}
                     else{Button {let value=text;text="";chat.send(value)} label:{Image(systemName:"arrow.up.circle.fill").font(.title)}.disabled(text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)}
