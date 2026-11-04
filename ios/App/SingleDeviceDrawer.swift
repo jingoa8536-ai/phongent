@@ -8,7 +8,7 @@ struct AgentHome:View {
             DeviceWorkspace(hub:hub,initialDevice:first.id,onLeave:onDevices)
         } else {
             NavigationStack {
-                ContentUnavailableView("暂无已连接设备",systemImage:"iphone.gen3",description:Text("在设备页连接安卓后，这里显示全部 agent 和聊天。"))
+          VStack { Image(systemName: "iphone.gen3").font(.largeTitle).foregroundStyle(.secondary); Text("暂无已连接设备").font(.headline); Text("在设备页连接安卓后，这里显示全部 agent 和聊天。").font(.subheadline).foregroundStyle(.secondary) }
                     .navigationTitle("agent")
                     .toolbar{NavigationLink("模型",destination:ModelChatView())}
             }
