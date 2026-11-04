@@ -5,6 +5,9 @@ struct ModelSettingsView:View {
     @ObservedObject private var account=ModelAccount.shared
     @Environment(\.dismiss) var dismiss
     @State private var adding:ProviderPreset?
+    private func providerSubtitle(_ provider:ModelProvider) -> String {
+        provider.kind == .chatGPT ? (account.credentials.accessToken.isEmpty ? "未登录":account.credentials.email) : "\(provider.models.count) 个模型 · \(provider.kind.label)"
+    }
     var body:some View {
         NavigationStack {
             List {
@@ -16,7 +19,7 @@ struct ModelSettingsView:View {
                 Section("服务商") {
                     ForEach(catalog.saved.providers){provider in
                         NavigationLink {ModelProviderDetail(id:provider.id)} label:{
-                            VStack(alignment:.leading,spacing:5){Text(provider.name);Text(provider.kind == .chatGPT ? (account.credentials.accessToken.isEmpty ? "未登录":account.credentials.email):"\(provider.models.count) 个模型 · \(provider.kind.label)").font(.caption).foregroundStyle(.secondary)}
+                            VStack(alignment:.leading,spacing:5){Text(provider.name);Text(providerSubtitle(provider)).font(.caption).foregroundStyle(.secondary)}
                         }
                     }
                 }
@@ -35,11 +38,11 @@ struct ModelSettingsView:View {
                 }
                 if let error=catalog.errors["settings"]{Text(error).foregroundStyle(.orange)}
             }.navigationTitle("模型").navigationBarTitleDisplayMode(.inline)
-                .toolbar{Button("完成"){dismiss()}}
-                .sheet(item:$adding){preset in AddModelProviderView(initialPreset:preset)}
-                .onAppear{catalog.syncChatGPT()}
-                .onChange(of:account.models){_,_ in catalog.syncChatGPT()}
-                .onChange(of:account.credentials.clientId){_,_ in catalog.syncChatGPT()}
+            .toolbar{Button("完成"){dismiss()}}
+            .sheet(item:$adding){preset in AddModelProviderView(initialPreset:preset)}
+            .onAppear{catalog.syncChatGPT()}
+            .onChange(of:account.models){_,_ in catalog.syncChatGPT()}
+            .onChange(of:account.credentials.clientId){_,_ in catalog.syncChatGPT()}
         }
     }
 }
@@ -61,7 +64,7 @@ struct ModelRolePicker:View {
                 Section(provider.name) {
                     ForEach(provider.models.filter{search.isEmpty || $0.id.localizedCaseInsensitiveContains(search) || $0.name.localizedCaseInsensitiveContains(search)}){model in
                         Button {catalog.choose(role,provider:provider,model:model.id);dismiss()} label:{
-                            HStack {VStack(alignment:.leading){Text(model.name);if model.name != model.id{Text(model.id).font(.caption).foregroundStyle(.secondary)}};Spacer();if catalog.saved.roles[role.rawValue] == ModelSelection(providerId:provider.id,model:model.id){Image(systemName:"checkmark")}}
+                            HStack {VStack(alignment:.leading){Text(model.name);if model.name != model.id{Text(model.id).font(.caption).foregroundStyle(.secondary)}}}
                         }
                     }
                 }
@@ -74,7 +77,7 @@ struct AddModelProviderView:View {
     @ObservedObject private var catalog=ModelCatalog.shared
     @Environment(\.dismiss) var dismiss
     @State private var preset="DeepSeek"
-    @State private var draft=ModelProvider(name:"DeepSeek",kind:.chatCompletions,baseURL:"https://api.deepseek.com")
+    @State private var draft=ModelProvider(name:"DeepSeek",kind:.chatCompletions,baseURL:"https://api.deepseek.com/v1",apiKey:"")
     @State private var manual=""
     @State private var testing=false
     @State private var error:String?
@@ -82,6 +85,9 @@ struct AddModelProviderView:View {
     init(initialPreset:ProviderPreset = ProviderPreset.all[0]) {
         _preset=State(initialValue:initialPreset.name)
         _draft=State(initialValue:ModelProvider(name:initialPreset.name,kind:initialPreset.kind,baseURL:initialPreset.baseURL,sessionHeader:initialPreset.sessionHeader))
+    }
+    private func selectPreset(_ item:ProviderPreset) {
+        preset=item.name;draft=ModelProvider(name:item.name,kind:item.kind,baseURL:item.baseURL,sessionHeader:item.sessionHeader);error=nil
     }
     var body:some View {
         NavigationStack {
@@ -96,29 +102,29 @@ struct AddModelProviderView:View {
                 } else {Button("使用已登录的 ChatGPT"){catalog.syncChatGPT();dismiss()}}
                 Section("添加服务商") {
                     ScrollView(.horizontal,showsIndicators:false){HStack {ForEach(ProviderPreset.all){item in
-                        Button(item.name){preset=item.name;draft=ModelProvider(name:item.name,kind:item.kind,baseURL:item.baseURL,sessionHeader:item.sessionHeader);error=nil}
-                            .buttonStyle(.bordered).tint(preset==item.name ? .mint:.gray)
+                        Button(item.name){selectPreset(item)}
+                        .buttonStyle(.bordered).tint(preset==item.name ? .mint:.gray)
                     }}}.listRowInsets(EdgeInsets(top:12,leading:0,bottom:12,trailing:0))
                     if preset=="自定义" {
                         TextField("名称",text:$draft.name)
-                        Picker("接口类型",selection:$draft.kind){ForEach(ModelProtocol.allCases.filter{$0 != .chatGPT},id:\.self){Text($0.label).tag($0)}}
+                        Picker("接口类型",selection:$draft.kind){ForEach(ModelProtocol.allCases.filter{$0 != .chatGPT},id:\.self){kind in Text(kind.label).tag(kind)}}
                         TextField("Base URL",text:$draft.baseURL).textInputAutocapitalization(.never).autocorrectionDisabled()
                     }
                     HStack {
-                        Group{if showKey{TextField("API Key",text:$draft.apiKey)}else{SecureField("API Key",text:$draft.apiKey)}}.textInputAutocapitalization(.never).autocorrectionDisabled()
+                        Group{if showKey{TextField("API Key",text:$draft.apiKey)}else{SecureField("API Key",text:$draft.apiKey)}}
                         Button(showKey ? "隐藏":"显示"){showKey.toggle()}.font(.caption)
                     }
                     TextField("测试模型 ID（可选）",text:$manual).textInputAutocapitalization(.never).autocorrectionDisabled()
                     Button(testing ? "测试中…":"测试并保存") {
                         testing=true;error=nil
                         let provider=draft,model=manual.trimmingCharacters(in:.whitespacesAndNewlines)
-                        Task {do{try await catalog.testAndSave(provider,manualModel:model);dismiss()}catch{self.error=error.localizedDescription};testing=false}
+                        Task {do{try await catalog.testAndSave(provider,manualModel:model);dismiss()}catch{self.error=error.localizedDescription}}
                     }.disabled(testing || draft.baseURL.isEmpty || (draft.apiKey.isEmpty && preset != "自定义"))
                     if let error{Text(error).font(.caption).foregroundStyle(.orange)}
                 }.disabled(testing)
             }.navigationTitle("添加服务商").navigationBarTitleDisplayMode(.inline)
-                .toolbar{Button("取消"){dismiss()}.disabled(testing)}
-                .onChange(of:account.credentials.accessToken){_,token in if !token.isEmpty{catalog.syncChatGPT()}}
+            .toolbar{Button("取消"){dismiss()}.disabled(testing)}
+            .onChange(of:account.credentials.accessToken){_,token in if !token.isEmpty{catalog.syncChatGPT()}}
         }.interactiveDismissDisabled(testing)
     }
 }
@@ -132,6 +138,14 @@ struct ModelProviderDetail:View {
     @State private var confirmRemove=false
     @State private var search=""
     var provider:ModelProvider?{catalog.saved.providers.first{$0.id==id}}
+    private func roleButtons(provider:ModelProvider, modelId:String) -> some View {
+        HStack {
+            ForEach(ModelRole.allCases,id:\.self){role in
+                let isSelected:Bool = catalog.selection(role)==ModelSelection(providerId:id,model:modelId)
+                Button(role.title){catalog.choose(role,provider:provider,model:modelId)}.buttonStyle(.bordered).tint(isSelected ? .mint:.gray)
+            }
+        }.font(.caption)
+    }
     var body:some View {
         Group {
             if let provider {
@@ -154,19 +168,15 @@ struct ModelProviderDetail:View {
                             VStack(alignment:.leading,spacing:8){
                                 Text(model.name).font(.headline)
                                 if model.name != model.id{Text(model.id).font(.caption).foregroundStyle(.secondary)}
-                                HStack {
-                                    ForEach(ModelRole.allCases,id:\.self){role in
-                                        Button(role.title){catalog.choose(role,provider:provider,model:model.id)}.buttonStyle(.bordered).tint(catalog.selection(role)==ModelSelection(providerId:id,model:model.id) ? .mint:.gray)
-                                    }
-                                }.font(.caption)
+                                roleButtons(provider:provider, modelId:model.id)
                                 Button("测试调用"){Task{await catalog.probe(provider,model:model.id)}}.font(.caption).disabled(catalog.busy.contains(id))
                             }.padding(.vertical,5)
                         }
                     }
                     Section{Button("移除服务商",role:.destructive){confirmRemove=true}}
                 }.navigationTitle(provider.name).searchable(text:$search,prompt:"搜索模型")
-                    .confirmationDialog("移除服务商及其模型用途？",isPresented:$confirmRemove,titleVisibility:.visible){Button("移除",role:.destructive){catalog.remove(id);dismiss()}}
-                    .alert("修改 API Key",isPresented:$changingKey){SecureField("API Key",text:$key);Button("测试并保存"){var draft=provider;draft.apiKey=key;key="";Task{do{try await catalog.testAndSave(draft,manualModel:catalog.selection(.main)?.providerId==id ? catalog.selection(.main)!.model:"")}catch{catalog.errors[id]=error.localizedDescription}}};Button("取消",role:.cancel){key=""}}
+                .confirmationDialog("移除服务商及其模型用途？",isPresented:$confirmRemove,titleVisibility:.visible){Button("移除",role:.destructive){catalog.remove(id);dismiss()}}
+                .alert("修改 API Key",isPresented:$changingKey){SecureField("API Key",text:$key);Button("测试并保存"){var draft=provider;draft.apiKey=key;key="";Task{do{try await catalog.testAndSave(draft);dismiss()}catch{}}}} 
             } else {ContentUnavailableView("服务商已移除",systemImage:"network")}
         }
     }
