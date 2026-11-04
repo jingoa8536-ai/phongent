@@ -200,7 +200,7 @@ struct FleetWorkspace:View {
 struct FleetPipStack:View {
     var agents:[NearbyAgent]
     @AppStorage("showAgentWindows") private var showWindows=true
-    var body:some View {if showWindows{ScrollView(.horizontal){HStack(alignment:.bottom,spacing:8){ForEach(agents){agent in FleetPip(agent:agent)}}).fixedSize(horizontal:false,vertical:true)}}
+    var body:some View {if showWindows{ScrollView(.horizontal){HStack(alignment:.bottom,spacing:8){ForEach(agents){agent in FleetPip(agent:agent)}}}.fixedSize(horizontal:false,vertical:true)}}
 }
 struct FleetPip:View {
     @ObservedObject var agent:NearbyAgent
