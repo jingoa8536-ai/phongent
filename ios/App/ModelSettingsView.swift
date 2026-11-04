@@ -41,8 +41,8 @@ struct ModelSettingsView:View {
             .toolbar{Button("完成"){dismiss()}}
             .sheet(item:$adding){preset in AddModelProviderView(initialPreset:preset)}
             .onAppear{catalog.syncChatGPT()}
-            .onChange(of:account.models){_ in catalog.syncChatGPT()}
-            .onChange(of:account.credentials.clientId){_ in catalog.syncChatGPT()}
+            .onChange(of:account.models, perform:{_ in catalog.syncChatGPT()})
+            .onChange(of:account.credentials.clientId, perform:{_ in catalog.syncChatGPT()})
         }
     }
 }
@@ -103,7 +103,7 @@ struct AddModelProviderView:View {
                 Section("添加服务商") {
                     ScrollView(.horizontal,showsIndicators:false){HStack {ForEach(ProviderPreset.all){item in
                         Button(action:{selectPreset(item)}) { Text(item.name) }
-                        .buttonStyle(.bordered).tint(preset==item.name ? .mint:.gray)
+                        .buttonStyle(.bordered).tint(preset==item.name ? Color.mint : Color.gray)
                     }}}.listRowInsets(EdgeInsets(top:12,leading:0,bottom:12,trailing:0))
                     if preset=="自定义" {
                         TextField("名称",text:$draft.name)
@@ -124,10 +124,12 @@ struct AddModelProviderView:View {
                 }.disabled(testing)
             }.navigationTitle("添加服务商").navigationBarTitleDisplayMode(.inline)
             .toolbar{Button("取消"){dismiss()}.disabled(testing)}
-            .onChange(of:account.credentials.accessToken){token in if !token.isEmpty{catalog.syncChatGPT()}}
+            .onChange(of:account.credentials.accessToken, perform:{token in if !token.isEmpty{catalog.syncChatGPT()}})
         }.interactiveDismissDisabled(testing)
     }
+
 }
+
 struct ModelProviderDetail:View {
     let id:String
     @ObservedObject private var catalog=ModelCatalog.shared
