@@ -49,7 +49,7 @@ struct Dashboard:View {
     private var pendingUserMessages:[DeviceChatMessage] {
                                      bridge.chatMessages.filter { $0.role == "user" && ["提交中", "提交结果不确定", "已排队"].contains($0.status) }
     }
-    private func chatMessageRow(_ message: DeviceChatMessage) -> some View { HStack(alignment:.bottom) { if message.role=="user" {Spacer(minLength:36)} VStack(alignment:.leading,spacing:8) { Text(message.text).textSelection(.enabled) Text(message.status).font(.caption2).foregroundStyle(.secondary) }.padding(14).background(message.role=="user" ? Color.mint.opacity(0.16) : Color(uiColor:.secondarySystemGroupedBackground),in:RoundedRectangle(cornerRadius:20)) if message.role != "user" {Spacer(minLength:36)} } }.id(message.id) }
+    private func chatMessageRow(_ message: DeviceChatMessage) -> some View { HStack(alignment:.bottom) { if message.role=="user" {Spacer(minLength:36)}; VStack(alignment:.leading,spacing:8) { Text(message.text).textSelection(.enabled); Text(message.status).font(.caption2).foregroundStyle(.secondary) }.padding(14).background(message.role=="user" ? Color.mint.opacity(0.16) : Color(uiColor:.secondarySystemGroupedBackground),in:RoundedRectangle(cornerRadius:20)); if message.role != "user" {Spacer(minLength:36)} } .id(message.id) }
 var body:some View {
         NavigationStack {
             ScrollViewReader { proxy in
