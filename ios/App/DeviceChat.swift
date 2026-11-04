@@ -150,14 +150,19 @@ struct Dashboard:View {
             }.padding()
         }.navigationTitle("消息")
     }
-    private var composer:some View {
+    private var busyStatusText:String {
+                                       if currentExchange?.phase=="unlock" {return "之前的任务等待解锁；解锁后自动继续"}
+        if currentExchange?.phase=="paused" {return "之前的任务已暂停：" + bridge.snapshot.detail}
+        return "设备有未结束任务，新回复将排队"
+    }
+private var composer:some View {
         VStack(spacing:8) {
             if notificationReply != nil {
                 if !bridge.connected {
                     Button("设备已断开，点击重连"){Task{await bridge.refresh(force:true)}}.font(.caption).foregroundStyle(.orange)
                 } else if bridge.snapshot.busy {
                     VStack(alignment:.leading,spacing:8) {
-                        Text(currentExchange?.phase=="unlock" ? "之前的任务等待解锁；解锁后自动继续" : currentExchange?.phase=="paused" ? "之前的任务已暂停：" + bridge.snapshot.detail : "设备有未结束任务，新回复将排队").font(.caption).foregroundStyle(.secondary)
+                        Text(busyStatusText).font(.caption).foregroundStyle(.secondary)
                         HStack {
                             if currentExchange?.phase=="paused" {
                                 Button("继续之前任务"){Task{await bridge.command("resume")}}
