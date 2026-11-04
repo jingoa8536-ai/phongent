@@ -125,9 +125,9 @@ private struct DeviceConversationGroup:View {
             } label:{
                 groupLabel
             }
-            .onChange(of:bridge.snapshot.chatRevision) { _,_ in Task{await bridge.refreshConversations()} }
-            .onChange(of:bridge.snapshot.currentConversationId) { _,_ in Task{await bridge.refreshConversations()} }
-            .onChange(of:bridge.snapshot.phase) { _,_ in Task{await bridge.refreshConversations()} }
+            .onChange(of:bridge.snapshot.chatRevision) { _ in Task{await bridge.refreshConversations()} }
+            .onChange(of:bridge.snapshot.currentConversationId) { _ in Task{await bridge.refreshConversations()} }
+            .onChange(of:bridge.snapshot.phase) { _ in Task{await bridge.refreshConversations()} }
         }
     }
 }
