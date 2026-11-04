@@ -51,6 +51,7 @@ struct ModelRolePicker:View {
     @ObservedObject private var catalog=ModelCatalog.shared
     @Environment(\.dismiss) var dismiss
     @State private var search=""
+        private func filteredModels(provider:ModelProvider) -> [ProviderModel] { provider.models.filter { search.isEmpty || ($0.id + " " + $0.name).localizedCaseInsensitiveContains(search) } }
     var body:some View {
         List {
             if role != .main && role != .dispatch {
@@ -62,7 +63,7 @@ struct ModelRolePicker:View {
             if role == .dispatch {Section{Text("仅当前主控端调用，用于拆分和分配任务；不下发到设备执行模型。").font(.footnote)}}
             ForEach(catalog.saved.providers){provider in
                 Section(provider.name) {
-                    ForEach(provider.models.filter{search.isEmpty || ($0.id + " " + $0.name).localizedCaseInsensitiveContains(search)}){model in
+                                ForEach(filteredModels(provider:provider)){model in
                         Button {catalog.choose(role,provider:provider,model:model.id);dismiss()} label:{
                             HStack {VStack(alignment:.leading){Text(model.name);if model.name != model.id{Text(model.id).font(.caption).foregroundStyle(.secondary)}}}
                         }
