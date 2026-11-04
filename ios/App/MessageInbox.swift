@@ -39,7 +39,7 @@ struct MessageInbox:View {
     var body:some View {
         VStack(alignment:.leading,spacing:12) {
             Text("消息").font(.title2.bold())
-            if apps.isEmpty {ContentUnavailableView("暂无通知",systemImage:"bell")}
+            if apps.isEmpty {VStack  { Image(systemName: "bell").font(.largeTitle).foregroundStyle(.secondary); Text("暂无通知").font(.headline) }}
             ForEach(apps,id:\.self) { app in
                 let messages=bridge.snapshot.messages.filter{$0.app==app}
                 NavigationLink {
