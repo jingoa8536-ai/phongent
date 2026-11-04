@@ -146,7 +146,16 @@ struct ModelProviderDetail:View {
             }
         }.font(.caption)
     }
-    var body:some View {
+    private func modelRow(provider: ModelProvider, model: ProviderModel) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(model.name).font(.headline)
+            if model.name != model.id { Text(model.id).font(.caption).foregroundStyle(.secondary) }
+            roleButtons(provider: provider, modelId: model.id)
+            Button("测试调用") { Task { await catalog.probe(provider, model: model.id) } }.font(.caption).disabled(catalog.busy.contains(id))
+        }.padding(.vertical, 5)
+    }
+    
+                                                                                       var body:some View {
         Group {
             if let provider {
                 List {
@@ -163,14 +172,10 @@ struct ModelProviderDetail:View {
                         Button(catalog.busy.contains(id) ? "加载中…":"刷新模型列表"){Task{await catalog.refresh(id)}}.disabled(catalog.busy.contains(id))
                         if let message=catalog.errors[id]{Text(message).font(.caption).foregroundStyle(message.hasPrefix("调用成功") ? .green:.orange)}
                     }
-                    Section("模型（\(provider.models.count)）") {
-                        ForEach(provider.models.filter{search.isEmpty || ($0.id + " " + $0.name).localizedCaseInsensitiveContains(search)}){model in
-                            VStack(alignment:.leading,spacing:8){
-                                Text(model.name).font(.headline)
-                                if model.name != model.id{Text(model.id).font(.caption).foregroundStyle(.secondary)}
-                                roleButtons(provider:provider, modelId:model.id)
-                                Button("测试调用"){Task{await catalog.probe(provider,model:model.id)}}.font(.caption).disabled(catalog.busy.contains(id))
-                            }.padding(.vertical,5)
+                    Section {
+                        ForEach(provider.models.filter{search.isEmpty || ($0.id+" "+$0.name).localizedCaseInsensitiveContains(search)}){model in
+                                                                                                                                        modelRow(provider:provider, model:model)
+                                                                                                                                        
                         }
                     }
                     Section{Button("移除服务商",role:.destructive){confirmRemove=true}}
