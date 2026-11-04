@@ -86,12 +86,17 @@ struct ChatDeletionActions:ViewModifier {
     @State private var showDeleteConfirm=false
     @State private var showRename=false
     @State private var renameText=""
+    private func saveRename() {
+                               let title = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let chatId = chat.id
+        Task { try? await bridge.renameChat(id: chatId, title: title) }
+    }
     func body(content:Content) -> some View {
         content.contextMenu{
             Button("重命名聊天"){renameText=chat.title;showRename=true}
             Button("删除聊天",role:.destructive){showDeleteConfirm=true}
         }
         .alert("删除聊天？",isPresented:$showDeleteConfirm){Button("删除",role:.destructive){Task{await bridge.deleteChat(chat.id)}};Button("取消",role:.cancel){}}message:{Text("删除“\(chat.title)”及安卓端对应记录、附件和关联定时任务。无法撤销。")}
-        .alert("重命名聊天",isPresented:$showRename){TextField("聊天标题",text:$renameText);Button("取消",role:.cancel){};Button("保存"){Task{try? await bridge.renameChat(id:chat.id,title:renameText.trimmingCharacters(in:.whitespacesAndNewlines))}}}
+        .alert("重命名聊天",isPresented:$showRename){TextField("聊天标题",text:$renameText);Button("取消",role:.cancel){};Button("保存", action: saveRename)}
     }
 }
