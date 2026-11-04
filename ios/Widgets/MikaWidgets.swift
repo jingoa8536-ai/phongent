@@ -15,7 +15,7 @@ struct StatusWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: StatusProvider()) { entry in
             StatusWidgetContent(entry: entry)
-                .containerBackground(Color(red: 0.035, green: 0.055, blue: 0.075), for: .widget)
+                .background(Color(red: 0.035, green: 0.055, blue: 0.075))
                 .widgetURL(URL(string: "mikaremote://dashboard"))
         }.configurationDisplayName("agent 状态").description("设备与任务状态").supportedFamilies([.systemSmall, .systemMedium])
     }
