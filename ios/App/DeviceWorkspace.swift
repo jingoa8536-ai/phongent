@@ -2,8 +2,8 @@ import SwiftUI
 
 struct DeviceWorkspace:View {
     @ObservedObject var hub:NearbyHub
-    var singleDevice:Bool
-    var onLeave:(()->Void)?
+    var singleDevice:Bool=false
+    var onLeave:(()->Void)?=nil
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.dismiss) private var dismiss
     @State private var selectedDevice:String
@@ -25,7 +25,7 @@ struct DeviceWorkspace:View {
                     if let agent=selected {
                         Dashboard(onShowSidebar:{withAnimation(.easeOut(duration:0.2)){drawer.toggle()}},agentName:agent.name,avatarShape:agent.avatarShape,avatarHue:agent.avatarHue,onRename:{renameText=agent.name;renameTarget=agent})
                             .environmentObject(agent.client).id(agent.id)
-                    } else {VStack { Image(systemName: "iphone.gen3").font(.largeTitle).foregroundStyle(.secondary); Text("选择设备").font(.headline) }}
+                    } else {VStack { Image(systemName:"iphone.gen3").font(.largeTitle).foregroundStyle(.secondary); Text("选择设备").font(.headline) }}
                 }
                 if drawer && !wide {
                     Color.black.opacity(0.45).ignoresSafeArea().onTapGesture{withAnimation{drawer=false}}
@@ -88,7 +88,6 @@ struct DeviceWorkspace:View {
         withAnimation{drawer=false}
     }
 }
-
 private struct DeviceConversationGroup:View {
     @ObservedObject var agent:NearbyAgent
     @ObservedObject var bridge:BridgeClient
@@ -105,38 +104,26 @@ private struct DeviceConversationGroup:View {
         bridge.conversations.filter{search.isEmpty || agent.name.localizedCaseInsensitiveContains(search) || $0.title.localizedCaseInsensitiveContains(search) || $0.preview.localizedCaseInsensitiveContains(search)}
     }
     private var color:Color {let colors:[Color]=[.mint,.orange,.purple,.blue,.pink];return colors[agent.id.utf8.reduce(0){$0+Int($1)} % colors.count]}
+    private var groupLabel:some View {
+        HStack(spacing:10) {
+            AoraAnimatedAvatar(phase:agent.phase,active:bridge.snapshot.busy,shape:agent.avatarShape,hue:agent.avatarHue).frame(width:38,height:38).background(color.opacity(0.16),in:Circle())
+            VStack(alignment:.leading,spacing:3) {
+                Text(agent.name).font(.headline).lineLimit(1)
+                Text(bridge.connected ? bridge.snapshot.title : "离线").font(.caption2).foregroundStyle(bridge.connected ? color : .gray)
+            }
+        }.contextMenu{Button("重命名",action:rename)}
+    }
     var body:some View {
         if search.isEmpty || agent.name.localizedCaseInsensitiveContains(search) || !chats.isEmpty {
             DisclosureGroup(isExpanded:$expanded) {
                 Button("当前聊天",action:onDevice).font(.caption).foregroundStyle(color)
                 if let error=bridge.conversationError {Text(error).font(.caption).foregroundStyle(.orange)}
                 ForEach(chats) {chat in
-                    Button {onConversation(chat)} label:{
-                        HStack(alignment:.top,spacing:8) {
-                            VStack(alignment:.leading,spacing:5) {
-                                HStack {
-                                    Text(chat.title).font(.subheadline.weight(.medium)).lineLimit(1)
-                                    Spacer(minLength:4)
-                                    if bridge.chatUnread(chat) {Circle().fill(color).frame(width:6,height:6)}
-                                }
-                                Text(chat.needsAttention ? "需要处理" : chat.busy ? "正在执行" : chat.preview).font(.caption).foregroundStyle(chat.needsAttention ? Color.orange : .secondary).lineLimit(1)
-                                if chat.updatedAt>0 {Text(Date(timeIntervalSince1970:chat.updatedAt),style:.relative).font(.caption2).foregroundStyle(.tertiary)}
-                            }
-                            if selectedDevice==agent.id && bridge.snapshot.currentConversationId==chat.id {Image(systemName:"checkmark").font(.caption).foregroundStyle(color)}
-                        }.padding(.vertical,5).contentShape(Rectangle())
-                    }.buttonStyle(.plain).disabled(bridge.switchingChat || bridge.sending)
-                        .modifier(ChatDeletionActions(bridge:bridge,chat:chat))
-                        .listRowBackground(selectedDevice==agent.id && bridge.snapshot.currentConversationId==chat.id ? color.opacity(0.12):Color.clear)
+                    DeviceConversationRow(bridge:bridge,chat:chat,color:color,isCurrent:selectedDevice==agent.id && bridge.snapshot.currentConversationId==chat.id,onSelect:{onConversation(chat)})
                 }
                 if chats.isEmpty && bridge.conversationError == nil {Text(bridge.connected ? "暂无历史聊天":"离线 · 暂无缓存").font(.caption).foregroundStyle(.secondary)}
             } label:{
-                HStack(spacing:10) {
-                    AoraAnimatedAvatar(phase:agent.phase,active:bridge.snapshot.busy,shape:agent.avatarShape,hue:agent.avatarHue).frame(width:38,height:38).background(color.opacity(0.16),in:Circle())
-                    VStack(alignment:.leading,spacing:3) {
-                        Text(agent.name).font(.headline).lineLimit(1)
-                        Text(bridge.connected ? bridge.snapshot.title : "离线").font(.caption2).foregroundStyle(bridge.connected ? color : .gray)
-                    }
-                }.contextMenu{Button("重命名",action:rename)}
+                groupLabel
             }
             .onChange(of:bridge.snapshot.chatRevision) { _,_ in Task{await bridge.refreshConversations()} }
             .onChange(of:bridge.snapshot.currentConversationId) { _,_ in Task{await bridge.refreshConversations()} }
@@ -144,7 +131,34 @@ private struct DeviceConversationGroup:View {
         }
     }
 }
-
+private struct DeviceConversationRow:View {
+    @ObservedObject var bridge:BridgeClient
+    var chat:DeviceConversation
+    var color:Color
+    var isCurrent:Bool
+    var onSelect:()->Void
+    private var rowContent:some View {
+        HStack(alignment:.top,spacing:8) {
+            VStack(alignment:.leading,spacing:5) {
+                HStack {
+                    Text(chat.title).font(.subheadline.weight(.medium)).lineLimit(1)
+                    Spacer(minLength:4)
+                    if bridge.chatUnread(chat) {Circle().fill(color).frame(width:6,height:6)}
+                }
+                Text(chat.needsAttention ? "需要处理" : chat.busy ? "正在执行" : chat.preview).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                if chat.updatedAt>0 {Text(Date(timeIntervalSince1970:chat.updatedAt),style:.relative).font(.caption2).foregroundStyle(.secondary)}
+            }
+            if isCurrent {Image(systemName:"checkmark").font(.caption).foregroundStyle(color)}
+        }.padding(.vertical,5).contentShape(Rectangle())
+    }
+    var body:some View {
+        Button(action:onSelect) {rowContent}
+            .buttonStyle(.plain)
+            .disabled(bridge.switchingChat || bridge.sending)
+            .modifier(ChatDeletionActions(bridge:bridge,chat:chat))
+            .listRowBackground(isCurrent ? color.opacity(0.12):Color.clear)
+    }
+}
 private struct AgentNoticeBanner:View {
     @ObservedObject var bridge:BridgeClient
     var body:some View {
@@ -155,9 +169,9 @@ private struct AgentNoticeBanner:View {
                     Image(systemName:"exclamationmark.circle.fill").foregroundStyle(.orange)
                     Text(notice.text).font(.subheadline).fixedSize(horizontal:false,vertical:true)
                     Spacer(minLength:0)
-                    Button {bridge.notice=nil} label:{Image(systemName:"xmark").font(.caption.bold()).frame(width:32,height:32)}.accessibilityLabel("关闭提示")
-                }.padding(12).background(.regularMaterial,in:RoundedRectangle(cornerRadius:20)).shadow(color:.black.opacity(0.2),radius:10,y:4)
-                    .accessibilityElement(children:.contain)
+                    Button {bridge.notice=nil} label:{Image(systemName:"xmark").font(.caption.bold()).frame(width:32,height:32)}
+                }.padding(12).background(.regularMaterial,in:RoundedRectangle(cornerRadius:20)).shadow(color:.black.opacity(0.15),radius:8,y:4)
+                .accessibilityElement(children:.contain)
             }
         }.alert("删除聊天？",isPresented:Binding(get:{bridge.deletionTarget != nil},set:{if !$0{bridge.deletionTarget=nil}}),presenting:bridge.deletionTarget) {chat in
             Button("删除",role:.destructive){Task{await bridge.deleteChat(chat.id)}}
