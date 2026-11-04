@@ -46,7 +46,7 @@ struct Dashboard:View {
             }else if let pending=bridge.chatMessages.first(where:{$0.id==id+"-user"}){Text(pending.status).font(.caption).foregroundStyle(.secondary)}
         }.padding(12).background(.thinMaterial,in:RoundedRectangle(cornerRadius:16))
     }
-    private var pendingUserMessages {
+    private var pendingUserMessages:[DeviceChatMessage] {
                                      bridge.chatMessages.filter { $0.role == "user" && ["提交中", "提交结果不确定", "已排队"].contains($0.status) }
     }
     var body:some View {
@@ -127,6 +127,7 @@ struct Dashboard:View {
                 Dashboard(agentName:agentName,avatarShape:avatarShape,avatarHue:avatarHue,notificationReply:message).environmentObject(bridge)
             }
         }
+    }
     }
     private var chatHeader:some View {
         ZStack(alignment:.top) {
