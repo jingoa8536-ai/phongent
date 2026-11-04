@@ -111,10 +111,10 @@ struct Dashboard:View {
             .navigationTitle(notificationReply == nil ? "" : "通过 agent 回复").navigationBarTitleDisplayMode(.inline)
             .toolbar(notificationReply == nil ? .hidden:.visible,for:.navigationBar)
             .onChange(of:bridge.snapshot.commandId, perform:{id in
-                if let id,replyCommandIDs.contains(id),!bridge.snapshot.runId.isEmpty{replyRunIDs.insert(bridge.snapshot.runId)})
+                if let id,replyCommandIDs.contains(id),!bridge.snapshot.runId.isEmpty{replyRunIDs.insert(bridge.snapshot.runId)}
             })
             .onChange(of:bridge.snapshot.runId, perform:{run in
-                if let id=bridge.snapshot.commandId,replyCommandIDs.contains(id),!run.isEmpty{replyRunIDs.insert(run)})
+                if let id=bridge.snapshot.commandId,replyCommandIDs.contains(id),!run.isEmpty{replyRunIDs.insert(run)}
             })
             .toolbar {
                 if notificationReply != nil {ToolbarItem(placement:.cancellationAction){Button("关闭"){dismiss()}}}
