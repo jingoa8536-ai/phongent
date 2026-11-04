@@ -92,7 +92,7 @@ private func applyrename(){if let agent=renameDevice{hub.rename(agent,to:deviceN
             .navigationTitle("附近").toolbar{ToolbarItem(placement:.primaryAction){Button("刷新",systemImage:"arrow.clockwise"){Task{await hub.refresh()}}}}
             .sheet(item:$selected){agent in DeviceWorkspace(hub:hub,initialDevice:agent.id,singleDevice:false,onLeave:{selected=nil})}
             .sheet(isPresented:$editingGroups){NavigationStack{GroupEditor(hub:hub,checked:$checked,groupName:$groupName,targetGroup:$targetGroup)}}
-            .alert("设备名称",isPresented:$showRename){TextField("名称",text:$deviceName);Button("取消",role:.cancel){renameDevice=nil};Button("保存")applyrename()}}
+            .alert("设备名称",isPresented:$showRename){TextField("名称",text:$deviceName);Button("取消",role:.cancel){renameDevice=nil};Button("保存"){applyrename()}}
             .onChange(of:scenePhase, perform:{phase in if phase == .active{Task{await hub.refresh()}}})
         }
     }
