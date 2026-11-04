@@ -46,6 +46,9 @@ struct Dashboard:View {
             }else if let pending=bridge.chatMessages.first(where:{$0.id==id+"-user"}){Text(pending.status).font(.caption).foregroundStyle(.secondary)}
         }.padding(12).background(.thinMaterial,in:RoundedRectangle(cornerRadius:16))
     }
+    private var pendingUserMessages {
+                                     bridge.chatMessages.filter { $0.role == "user" && ["提交中", "提交结果不确定", "已排队"].contains($0.status) }
+    }
     var body:some View {
         NavigationStack {
             ScrollViewReader { proxy in
@@ -71,7 +74,7 @@ struct Dashboard:View {
                             ForEach(exchanges){exchange in
                                 NativeExchangeView(exchange:exchange,client:bridge,answer:exchange.id==exchanges.last?.id && bridge.snapshot.phase=="waiting" ? {text in Task{await bridge.command("answer",text:text)}}:nil)
                             }
-                            ForEach(bridge.chatMessages.filter{$0.role=="user" && ["提交中","提交结果不确定","已排队"].contains($0.status)}){pending in Text(pending.text).padding(14).frame(maxWidth:.infinity,alignment:.trailing)}
+       ForEach(pendingUserMessages){pending in Text(pending.text).padding(14).frame(maxWidth:.infinity,alignment:.trailing)}
                         } else {
                         ForEach(bridge.chatMessages) { message in
                             HStack(alignment:.bottom) {
@@ -91,13 +94,13 @@ struct Dashboard:View {
                                 //
                                 //
                                 //
-                                //
+                               //
                             }
                         }
-                        }
+                    
                         Color.clear.frame(height:1).id("bottom")
                     }.padding(18)
-                }.scrollDismissesKeyboard(.interactively)
+            .scrollDismissesKeyboard(.interactively)
                     .onAppear {bridge.loadChat();proxy.scrollTo("bottom",anchor:.bottom)}
                     .task {if notificationReply == nil,let id=bridge.snapshot.currentConversationId {await bridge.loadRemoteHistory(id);bridge.markChatRead(id)}}
                     .onChange(of:bridge.snapshot.exchanges?.count, perform:{_ in proxy.scrollTo("bottom",anchor:.bottom)})
